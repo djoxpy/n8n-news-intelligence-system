@@ -45,7 +45,7 @@ services:
       - n8n
       - tailscale-caddy
     ports:
-      - 5678:5678
+      - 5678
 
   qdrant:
     image: qdrant/qdrant
@@ -55,7 +55,7 @@ services:
       - n8n
     restart: unless-stopped
     ports:
-      - 6333:6333
+      - 6333
     volumes:
       - qdrant_storage:/qdrant/storage
 
