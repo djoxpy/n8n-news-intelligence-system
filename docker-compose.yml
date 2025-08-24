@@ -59,6 +59,30 @@ services:
     volumes:
       - qdrant_storage:/qdrant/storage
 
+  article-deduplicator:
+    build:
+      context: ./deduplicator_service
+      dockerfile: Dockerfile
+    container_name: article-deduplicator
+    ports:
+      - 8000
+    environment:
+      - SIMILARITY_THRESHOLD=0.85
+      - HOST=0.0.0.0
+      - PORT=8000
+      - WORKERS=1
+    volumes:
+      - ./article-deduplicator-logs:/app/logs
+    networks:
+      - n8n
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
 volumes:
   n8n_storage:
   postgres_storage:
