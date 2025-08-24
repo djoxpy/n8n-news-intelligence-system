@@ -44,8 +44,8 @@ services:
     networks:
       - n8n
       - tailscale-caddy
-    ports:
-      - 5678
+    # ports:
+    #   - 5678
 
   qdrant:
     image: qdrant/qdrant
@@ -54,8 +54,8 @@ services:
     networks: 
       - n8n
     restart: unless-stopped
-    ports:
-      - 6333
+    # ports:
+    #   - 6333
     volumes:
       - qdrant_storage:/qdrant/storage
 
@@ -64,8 +64,8 @@ services:
       context: ./deduplicator_service
       dockerfile: Dockerfile
     container_name: article-deduplicator
-    ports:
-      - 8000
+    # ports:
+    #   - 8000
     environment:
       - SIMILARITY_THRESHOLD=0.85
       - HOST=0.0.0.0
