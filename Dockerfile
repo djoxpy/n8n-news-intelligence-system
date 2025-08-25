@@ -5,6 +5,7 @@ USER root
 RUN apk add --update python3 py3-pip
  
 USER node
+# Install libraries needed for the read_url functionality
 RUN python3 -m pip install --user --break-system-packages pipx readability-lxml beautifulsoup4 html2text requests
 
 # Add the path of the pipx installation to PATH
