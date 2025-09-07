@@ -51,6 +51,7 @@ services:
     container_name: qdrant
     networks: 
       - n8n
+      - tailscale-caddy
     restart: unless-stopped
     volumes:
       - qdrant_storage:/qdrant/storage
