@@ -1,1 +1,3 @@
 .env
+tg_tools/venv/
+tg_tools/telegram_chats.json
