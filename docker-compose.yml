@@ -2,7 +2,7 @@ services:
   postgres:
     image: postgres:16-alpine
     hostname: postgres
-    networks: 
+    networks:
       - n8n
     restart: unless-stopped
     environment:
@@ -38,6 +38,7 @@ services:
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_USER=${POSTGRES_USER}
       - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      - OLLAMA_HOST=${OLLAMA_HOST:-ollama:11434}
     env_file:
       - path: .env
         required: true
@@ -49,7 +50,7 @@ services:
     image: qdrant/qdrant
     hostname: qdrant
     container_name: qdrant
-    networks: 
+    networks:
       - n8n
       - tailscale-caddy
     restart: unless-stopped
@@ -78,10 +79,44 @@ services:
       retries: 3
       start_period: 60s
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    hostname: ollama
+    networks:
+      - n8n
+    restart: unless-stopped
+    ports:
+      - 11434
+    volumes:
+      - ollama_storage:/root/.ollama
+    profiles:
+      - cpu
+
+  ollama-pull-llama:
+    image: ollama/ollama:latest
+    container_name: ollama-pull-llama
+    networks:
+      - n8n
+    volumes:
+      - ollama_storage:/root/.ollama
+    depends_on:
+      - ollama
+    entrypoint: /bin/sh
+    environment:
+      - OLLAMA_HOST=ollama:11434
+    command:
+      - "-c"
+      - "sleep 3; ollama pull llama3.2"
+    restart: "no"
+    profiles:
+      - cpu
+
 volumes:
   n8n_storage:
   postgres_storage:
   qdrant_storage:
+  ollama_storage:
 
 networks:
   n8n:
