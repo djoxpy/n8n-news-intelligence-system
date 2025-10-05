@@ -90,6 +90,10 @@ services:
       - 11434
     volumes:
       - ollama_storage:/root/.ollama
+    environment:
+      - OLLAMA_NUM_THREADS=4
+    cpuset: "0-3"
+    mem_limit: 8g
 
 volumes:
   n8n_storage:
