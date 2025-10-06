@@ -32,6 +32,7 @@ services:
       - N8N_PORT=${N8N_PORT}
       - N8N_PATH=${N8N_PATH}
       - N8N_EDITOR_BASE_URL=${N8N_EDITOR_BASE_URL}
+      - EXECUTIONS_TIMEOUT=-1
       - WEBHOOK_URL=https://${PUBLIC_DOMAIN}/
       - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
       - DB_TYPE=postgresdb
