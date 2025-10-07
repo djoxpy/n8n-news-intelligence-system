@@ -59,7 +59,7 @@ class WebToMarkdownConverter:
 
             soup = BeautifulSoup(content_html, 'html.parser')
 
-            for tag in soup.find_all(['script', 'style', 'nav', 'aside', 'footer', 'header', 'figcaption']):
+            for tag in soup.find_all(['script', 'style', 'nav', 'aside', 'footer', 'header', 'figcaption', 'iframe', 'frame', 'object', 'embed', 'applet']):
                 tag.decompose()
 
             for tag in soup.find_all(True):
