@@ -26,9 +26,9 @@ class ArticleDeduplicator:
     def get_embedding_text(self, article: Dict) -> str:
         title = article.get('title', '')
 
-        summary = article.get('summary', '')
+        summary = article.get('contentSnippet', '')
         if not summary:
-            summary = article.get('description', '')
+            summary = article.get('content', '')
 
         if summary:
             summary = summary[:200]
