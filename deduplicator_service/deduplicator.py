@@ -31,7 +31,7 @@ class ArticleDeduplicator:
             summary = article.get('content', '')
 
         if summary:
-            summary = summary[:200]
+            summary = summary[:2000]
 
         embedding_text = f"{title}. {summary}".strip()
 
