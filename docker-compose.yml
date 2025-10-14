@@ -64,7 +64,7 @@ services:
       dockerfile: Dockerfile
     container_name: article-deduplicator
     environment:
-      - SIMILARITY_THRESHOLD=0.80
+      - SIMILARITY_THRESHOLD=0.85
       - HOST=0.0.0.0
       - PORT=8000
       - WORKERS=1
