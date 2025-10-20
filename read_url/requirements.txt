@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+pydantic
+requests
+readability-lxml
+beautifulsoup4
+html2text
+lxml
+crawl4ai
+playwright
+python-multipart
+aiofiles

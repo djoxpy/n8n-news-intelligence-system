@@ -80,6 +80,28 @@ services:
       retries: 3
       start_period: 60s
 
+  web-converter:
+    build:
+      context: ./read_url
+      dockerfile: Dockerfile
+    container_name: web-converter
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=info
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - n8n
+    restart: unless-stopped
+    ports:
+      - 9000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
   ollama:
     image: ollama/ollama:latest
     container_name: ollama
