@@ -82,23 +82,23 @@ services:
       retries: 3
       start_period: 60s
 
-  web-converter:
+  article-classifier:
     build:
-      context: ./read_url
+      context: ./article_relevance
       dockerfile: Dockerfile
-    container_name: web-converter
+    container_name: article-classifier
+    ports:
+      - "8020:8020"
     environment:
-      - PYTHONUNBUFFERED=1
-      - LOG_LEVEL=info
+      - HF_HOME=/app/.cache/huggingface
+      - TRANSFORMERS_CACHE=/app/.cache/huggingface
     volumes:
-      - ./logs:/app/logs
+      - huggingface_cache:/app/.cache/huggingface
     networks:
       - n8n
     restart: unless-stopped
-    ports:
-      - 9000
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8020/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -125,6 +125,7 @@ volumes:
   postgres_storage:
   qdrant_storage:
   ollama_storage:
+  huggingface_cache:
 
 networks:
   n8n:

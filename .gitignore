@@ -2,3 +2,4 @@
 tg_tools/venv/
 tg_tools/telegram_chats.json
 article_relevance/venv/
+test_categories/
