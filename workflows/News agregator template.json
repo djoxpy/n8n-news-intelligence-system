@@ -1,0 +1,2433 @@
+{
+  "name": "News agregator template",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 18,
+              "triggerAtMinute": 49
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -3504,
+        -576
+      ],
+      "id": "7e27626f-efd7-4fc7-8bd7-13084d5ff767",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "content": "# TODO:\n* ## Save summarized day\n",
+        "height": 128,
+        "width": 310
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        -656
+      ],
+      "id": "da6a9381-da54-4f37-a5ae-fb1fa9281030",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "flqdxwZY1kWs2weo",
+          "mode": "list",
+          "cachedResultName": "feeds",
+          "cachedResultUrl": "/projects/VRQDZNJUhzlPnRhi/datatables/flqdxwZY1kWs2weo"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "active",
+              "condition": "isTrue"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        -3312,
+        -576
+      ],
+      "id": "73fb767e-5e4c-4abe-a33b-2935b6699636",
+      "name": "Get RSS Feed URLs",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "executeOnce": false,
+        "command": "=python3 /home/node/.n8n/read_url_markdown/read_url_cleanup.py {{ JSON.stringify($json.escapedData) }} --print-json"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -3120,
+        48
+      ],
+      "id": "8178ad58-f1be-4615-9129-ccaa963d155b",
+      "name": "Read URL",
+      "executeOnce": false,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://article-deduplicator:8000/deduplicate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "articles",
+              "value": "={{ $json.data }}"
+            },
+            {
+              "name": "similarity_threshold",
+              "value": "0.85"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2816,
+        -160
+      ],
+      "id": "6b69bed4-ab2a-4d40-a0d4-c3ac0c1101f3",
+      "name": "Deduplicate articles",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -3120,
+        -576
+      ],
+      "id": "0851379d-a5f2-4bd6-b33d-ecb263b5838d",
+      "name": "RSS Read",
+      "executeOnce": false,
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chunkSize": 100000,
+        "chunkOverlap": 2000,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainSummarization",
+      "typeVersion": 2.1,
+      "position": [
+        -1616,
+        -848
+      ],
+      "id": "c07c67ec-af93-4fea-a959-03ef30169299",
+      "name": "Summarization Politics",
+      "executeOnce": false,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "alwaysOutputData": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1152,
+        -784
+      ],
+      "id": "1221f053-4ee2-41e1-a3a8-e28d77d7f676",
+      "name": "Merge Politics",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c23c0df7-4ba1-45c7-a1bc-e3ff7d8ac67d",
+              "name": "creator",
+              "value": "={{ $json.creator }}",
+              "type": "string"
+            },
+            {
+              "id": "4c591bd0-8d6e-4fcd-b28d-4255b382917f",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "e01682e8-45a0-4891-9f0e-e6a90c7aa088",
+              "name": "link",
+              "value": "={{ $json.link }}",
+              "type": "string"
+            },
+            {
+              "id": "acb15d54-27c6-4182-8eba-2025dc9e717c",
+              "name": "pubDate",
+              "value": "={{ $json.pubDate }}",
+              "type": "string"
+            },
+            {
+              "id": "b9d7eae7-b6bb-4418-92d6-a4a12645223b",
+              "name": "dc:creator",
+              "value": "={{ $json['dc:creator'] }}",
+              "type": "string"
+            },
+            {
+              "id": "83fbea1a-63f3-40ea-9bcd-d62b2886a7fa",
+              "name": "content",
+              "value": "={{ $json.content }}",
+              "type": "string"
+            },
+            {
+              "id": "7ddaa8b2-5543-4987-a8a5-c8e63fe431ee",
+              "name": "contentSnippet",
+              "value": "={{ $json.contentSnippet }}",
+              "type": "string"
+            },
+            {
+              "id": "dcf29ebe-5aea-46db-9650-28220f07f5f2",
+              "name": "guid",
+              "value": "={{ $json.guid }}",
+              "type": "string"
+            },
+            {
+              "id": "87125e4d-1c3c-46f2-b849-b474d9b29106",
+              "name": "categories",
+              "value": "={{ $json.categories }}",
+              "type": "string"
+            },
+            {
+              "id": "7e149139-71b8-4510-8895-8ffe70cd3f6b",
+              "name": "isoDate",
+              "value": "={{ $json.isoDate }}",
+              "type": "string"
+            },
+            {
+              "id": "14031ef7-3a6a-4ce5-b772-d1898203af08",
+              "name": "summary",
+              "value": "={{ $json.output.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "dotNotation": false
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -960,
+        -784
+      ],
+      "id": "bde21b8a-62c7-465e-8460-dceb5fe2ca5c",
+      "name": "Set Fields Politics"
+    },
+    {
+      "parameters": {
+        "jsCode": "function splitMessage(text, limit = 4000) {\n  const parts = [];\n  while (text.length > limit) {\n    let splitPos = text.lastIndexOf('\\n', limit);\n    if (splitPos === -1 || splitPos < 100) {\n      splitPos = limit;\n    }\n    parts.push(text.slice(0, splitPos));\n    text = text.slice(splitPos);\n  }\n  if (text) {\n    parts.push(text);\n  }\n  return parts;\n}\n\nconst textArray = $json[\"text\"];\n\nif (!Array.isArray(textArray)) {\n  throw new Error(\"The input data must contain an array 'text'\");\n}\n\nconst today = new Date();\nconst formattedDate = today.toLocaleDateString('ru-RU', { \n  day: 'numeric', \n  month: 'long', \n  year: 'numeric' \n}).replace(/\\//g, '.');\nconst header = `📊 *Political digest for ${formattedDate}*\\n\\n`;\n\nconst fullMessage = textArray.join('\\n\\n');\n\nconst messageWithHeader = header + fullMessage;\n\nconst chunks = splitMessage(messageWithHeader, 4096);\n\nreturn chunks.map((chunk, index) => ({ \n  json: { \n    text: chunk,\n    part: index + 1,\n    total_parts: chunks.length\n  } \n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        -784
+      ],
+      "id": "40162b6d-85b8-42ee-8820-1c8510b7f1bb",
+      "name": "Split message Politics",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        192,
+        -784
+      ],
+      "id": "18509ca1-79ae-46fe-b5cf-8c2e265fedee",
+      "name": "Telegram Politics",
+      "webhookId": "8d3c3832-5f40-4ab0-bcd3-81f73ca6c165",
+      "executeOnce": false,
+      "notesInFlow": false,
+      "retryOnFail": false,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "telegramApi": {
+          "id": "38giC5s85GNwUMTu",
+          "name": "Telegram account template"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "=⚠️ {{ $now.format('dd-MM-yyyy | HH:mm') }}\n--- No new articles found ---",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -2624,
+        -368
+      ],
+      "id": "f92868bf-bee2-40a9-a955-890a617db7b4",
+      "name": "No articles",
+      "webhookId": "dc3e7344-b8bc-4438-b431-3a638cdb30f8",
+      "executeOnce": false,
+      "notesInFlow": false,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "telegramApi": {
+          "id": "38giC5s85GNwUMTu",
+          "name": "Telegram account template"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -3024,
+        -160
+      ],
+      "id": "2ce7b938-a876-4c77-9e7a-66ef3678b687",
+      "name": "Data to list"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "unique_articles",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -2624,
+        -160
+      ],
+      "id": "a4caa954-980a-497b-a5ff-8abc2af4c8f9",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nreturn items.map(item => {\n  const data = item.json;\n\n  const cleanString = (str) => {\n    if (str == null) return '';\n    let cleaned = String(str).trim();\n    if (cleaned.startsWith('\"') && cleaned.endsWith('\"')) {\n      cleaned = cleaned.slice(1, -1);\n    }\n    return cleaned;\n  };\n\n  const parseArray = (str) => {\n    if (!str) return [];\n    let cleaned = cleanString(str);\n\n    try {\n      const parsed = JSON.parse(cleaned);\n      if (Array.isArray(parsed)) return parsed;\n    } catch (e) {\n    }\n\n    if (cleaned.includes(',')) {\n      return cleaned.split(',').map(s => cleanString(s.trim())).filter(Boolean);\n    }\n\n    return [cleaned];\n  };\n\n  const cleanedData = {\n    \"creator\": cleanString(data.creator),\n    \"title\": cleanString(data.title),\n    \"link\": cleanString(data.link),\n    \"pubDate\": cleanString(data.pubDate),\n    \"dc:creator\": cleanString(data[\"dc:creator\"]),\n    \"content\": cleanString(data.content),\n    \"contentSnippet\": cleanString(data.contentSnippet),\n    \"guid\": cleanString(data.guid),\n    \"categories\": parseArray(data.categories),\n    \"isoDate\": data.isoDate || data[\"isoDate\"]\n  };\n\n  const escapedJsonString = JSON.stringify(cleanedData).replace(/\"/g, '\\\"');\n\n  return {\n    json: {\n      escapedData: escapedJsonString\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3312,
+        48
+      ],
+      "id": "4c3a6711-8b3e-42e1-91e5-a3b30e17d291",
+      "name": "JSON preparing",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nconst validItems = items.filter(item => {\n  return !item.json.hasOwnProperty('error');\n});\n\nreturn validItems.map(item => {\n  const data = item.json;\n  \n  if (data.stdout && typeof data.stdout === 'string') {\n    try {\n      const parsedArticle = JSON.parse(data.stdout);\n      \n      return {\n        json: parsedArticle\n      };\n    } catch (e) {\n      console.error('Error parsing JSON article:', e);\n      return {\n        json: data\n      };\n    }\n  }\n  \n  return {\n    json: data\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2928,
+        48
+      ],
+      "id": "7e3dd4d8-9024-4dd0-8e6f-cb983bbe2d74",
+      "name": "Parser",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "inputText": "={{ $json.title }}\n{{ $json.contentSnippet.slice(0, 250) }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "relevant_politics",
+              "description": "Articles directly related to politics/geopolitics (Ukraine, USA, Europe, China)"
+            },
+            {
+              "category": "relevant_tech",
+              "description": "Articles directly related to AI/ML, emerging technologies, tech news"
+            }
+          ]
+        },
+        "options": {
+          "multiClass": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        -2176,
+        -400
+      ],
+      "id": "5f5a4fdb-9ce3-47fc-b9ef-cd036de83d3f",
+      "name": "Articles Relevance",
+      "executeOnce": false,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "getTimeBetweenDates",
+        "startDate": "={{ $('RSS Read').item.json.isoDate }}",
+        "endDate": "={{ $now }}",
+        "units": [
+          "hour"
+        ],
+        "outputFieldName": "=article_life_time",
+        "options": {
+          "includeInputFields": true,
+          "isoString": false
+        }
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        -2928,
+        -576
+      ],
+      "id": "1bca2329-f3cf-42d0-bff3-358983376b00",
+      "name": "Set article_life_time"
+    },
+    {
+      "parameters": {
+        "content": "# Make article relevance locally",
+        "height": 240,
+        "width": 720,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2480,
+        -1136
+      ],
+      "id": "165215f5-3cdd-4b66-9659-8a59ae51f021",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {
+          "safetySettings": {
+            "values": [
+              {
+                "category": "HARM_CATEGORY_HARASSMENT",
+                "threshold": "BLOCK_NONE"
+              },
+              {
+                "category": "HARM_CATEGORY_HATE_SPEECH",
+                "threshold": "BLOCK_NONE"
+              },
+              {
+                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                "threshold": "BLOCK_NONE"
+              },
+              {
+                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                "threshold": "BLOCK_NONE"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -2128,
+        -240
+      ],
+      "id": "a0f21373-3904-4819-9279-12f16026ebad",
+      "name": "gemini-2.5-flash-lite",
+      "notesInFlow": false,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "f3TWMi3ZyBlDbDmK",
+          "name": "Google Gemini(PaLM) Api account template"
+        }
+      },
+      "notes": "700 articles ~ $0,04494"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {
+          "safetySettings": {
+            "values": [
+              {
+                "category": "HARM_CATEGORY_HARASSMENT",
+                "threshold": "BLOCK_NONE"
+              },
+              {
+                "category": "HARM_CATEGORY_HATE_SPEECH",
+                "threshold": "BLOCK_NONE"
+              },
+              {
+                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                "threshold": "BLOCK_NONE"
+              },
+              {
+                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                "threshold": "BLOCK_NONE"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1536,
+        -720
+      ],
+      "id": "677efba4-9cc6-4ae1-ad5f-8779f5996c21",
+      "name": "gemini-2.5-flash-lite Politics",
+      "notesInFlow": false,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "f3TWMi3ZyBlDbDmK",
+          "name": "Google Gemini(PaLM) Api account template"
+        }
+      },
+      "notes": "400 articles ~ $0.1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c232c7cb-a70d-463e-95cf-fd6f2035d25f",
+              "leftValue": "={{ $json.article_life_time.hours }}",
+              "rightValue": "=25",
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            },
+            {
+              "id": "038f0edf-8d07-486c-8cc2-553b05679744",
+              "leftValue": "={{ $json.article_life_time.hours }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2736,
+        -576
+      ],
+      "id": "06e6a5fd-de8b-4b02-af90-1e53819015bd",
+      "name": "Proceed with article_life_time < 25h"
+    },
+    {
+      "parameters": {
+        "content": "## Try crawl4ai or antibot system",
+        "height": 80,
+        "width": 198
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -3168,
+        176
+      ],
+      "id": "4356e4d7-c74f-49eb-9ba8-bb88b4be5ed9",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=<input_data>\n    {{ $json.data.toJsonString() }}\n</input_data>\n\n<instructions>\n    <role>\n        You are a Lead Political Analyst and Strategic Content Curator with 15 years of experience in geopolitical systems analysis and intelligence reporting.\n        CURRENT DATE: {{ $now.format('dd LLLL, yyyy') }}\n        You must write from the perspective of this date. Do not refer to early 2025 events as \"future\" or \"upcoming\".\n    </role>\n\n    <temporal_context_override>\n        Treat the following political realities as ESTABLISHED FACTS for {{ $now.format('LLLL yyyy') }}:\n        1. USA: Donald Trump is the sitting President (inaugurated Jan 2025). Do NOT use phrases like \"president-elect\", \"future administration\", or \"transition team\". Refer to his actions as current administration policy.\n        2. GERMANY: Treat the German leadership as stable. If the article mentions a Chancellor, assume it is the current acting leader without speculation about elections unless the article explicitly mentions an ongoing campaign.\n        3. GENERAL: Avoid phrases like \"upcoming year\", \"post-election uncertainty\" (unless referring to elections happening in late {{ $now.format('yyyy') }}).\n        4. CONFIDENCE: Do not hedge with \"likely,\" \"probably refers to,\" or \"assuming.\" If the article names a leader, use that name/title directly.\n    </temporal_context_override>\n\n    <task>\n        Analyze the provided <input_data> and generate a comprehensive two-part report for Telegram in Ukrainian. The report consists of Part 1: \"Analytical Essay\" and Part 2: \"Structured Intelligence Digest\".\n    </task>\n\n    <priorities>\n        1. **Factual Grounding**: Every claim must be supported by the provided articles. No outside hallucinations.\n        2. **Systemic Analysis**: Focus on cause-and-effect chains (Action A -> Reaction B).\n        3. **Coherence**: A unified narrative flow for Part 1; structured categorization for Part 2.\n        4. **Tone**: Professional, objective, deep, avoiding speculation.\n    </priorities>\n\n    <title_translation_protocol>\n        <prime_directive>\n            Translate article titles with EXTREME SEMANTIC FIDELITY. Do not editorialize, exaggerate, or change the subject-object relationship.\n        </prime_directive>\n        <strict_rules>\n            1. NO INTERPRETATION: Translate exactly what the title says, not what the article implies.\n            2. PRESERVE RELATIONSHIPS: If a title says \"X included in Y's files\", do NOT translate as \"X meets Y\".\n            3. NO CLICKBAIT: Maintain a neutral, journalistic tone even if the original is sensational.\n        </strict_rules>\n        <few_shot_examples>\n            Original: \"Trump, Clinton, Gates included in Epstein photo trove\"\n            BAD TRANSLATION: \"Опубліковано спільні фото Трампа і Клінтон з Епштейном\" (Hallucination: implies interaction/meeting).\n            CORRECT TRANSLATION: \"Трамп, Клінтон і Гейтс фігурують у фотоархіві Епштейна\" (Accurate: implies presence in collection).\n\n            Original: \"Zelensky says war must end\"\n            BAD TRANSLATION: \"Зеленський оголосив про капітуляцію\" (Hallucination: inference).\n            CORRECT TRANSLATION: \"Зеленський заявив, що війна повинна закінчитися\" (Accurate).\n        </few_shot_examples>\n    </title_translation_protocol>\n\n    <negative_constraints>\n        1. NO META-TALK: Do not write \"Here is the summary\", \"Based on the data\", or any analysis before the first header.\n        2. NO CONCLUDING TEXT: Do not write any general \"Conclusion\", \"Outlook\", or \"Short-term forecast\" paragraphs after the last region in Part 2.\n        3. NO MARKDOWN ARTIFACTS: Do not use `***` or `---` separators unless explicitly requested. Do not use code blocks (```)\n        4. NO PLACEHOLDERS: Never use brackets like [Insert text here].\n        5. NO COPYING: Do not output the prompt instructions.\n        6. NO EMOJIS IN NARRATIVE: In Part 1 (Essay), emojis are strictly prohibited inside the text.\n        7. NO EXPLICIT SUBHEADINGS IN PART 1: Do NOT print titles like \"Systemic Analysis\", \"Geopolitical Context\", \"Synthesis\", or \"**Section 1**\". Just write the paragraphs. The structure is logical, not visual.\n        8. NO TITLES IN ENGLISH IN PART2: Do not create [Title in Ukrainian].\n        9. NO TITLE DISTORTION: Never alter the factual meaning of a headline to make it more dramatic in Ukrainian.\n    </negative_constraints>\n\n    <critical_url_hygiene>\n        1. PROTOCOL CHECK: Ensure URLs have exactly ONE protocol.\n           - Bad: `https://http://site.com`\n           - Good: `https://site.com`\n        2. NO SPACES: URLs must NOT contain spaces.\n           - Bad: `al jazeera.com/news`\n           - Good: `aljazeera.com/news`\n        3. FORMAT: All links must be strictly Markdown: `[Strictly Translated Title in Ukrainian](URL)`.\n    </critical_url_hygiene>\n\n    <output_structure_part_1_essay>\n        Header: *---- 🧠 АНАЛІТИКА ДНЯ ----*\n\n        **Section 1: Systemic Analysis & Motivations** (3-4 paragraphs)\n        - Start directly with the analysis. Do not label this section.\n        - Analyze causal links between events from the articles.\n        - Explain actor motivations based on evidence.\n        - Format: Continuous narrative paragraphs.\n\n        **Section 2: Geopolitical Context** (1 paragraph)\n        - Do not label this section.\n        - MANDATORY: Integrate 1-2 historical parallels naturally into the flow.\n        - Phrasing: \"Similar to [period]...\" or \"Unlike the [event]...\"\n\n        **Section 3: Tensions & Indicators** (Integrated into the narrative)\n        - Do not create separate lists. Do not label this section.\n        - Weave tension zones and monitoring indicators naturally into the text of the previous sections or a dedicated paragraph.\n        - CRITICAL: Do NOT use emojis (like ⚡ or 🔔) to highlight these points. Use linguistic markers instead (e.g., \"Critical tension is observed in...\", \"Key indicators suggest...\").\n\n        **Section 4: Synthesis** (1 paragraph)\n        - Do not label this section.\n        - Final conclusion on the vector and most likely scenario (1-2 weeks).\n    </output_structure_part_1_essay>\n\n    <output_structure_part_2_digest>\n        <reasoning_requirements>\n            1. First, evaluate all articles to identify the Global Top 7 most impactful events.\n            2. Second, assign these Top 7 to \"EXECUTIVE_SUMMARY\".\n            3. Third, assign remaining articles to \"REGIONAL_CATEGORIES\".\n            4. CRITICAL SELF-CORRECTION: Check against the \"Stop List\". An article used in Part 2 Section 1 MUST NOT appear in Part 2 Section 2.\n        </reasoning_requirements>\n\n        Header: *---- 🎯 ГОЛОВНІ ТРЕНДИ ----*\n\n        <section_1_executive_summary>\n            Select exactly 7 top-priority articles (Global/Cross-regional impact).\n\n            <sorting_rules_section_1>\n                You MUST sort the 7 articles in this EXACT order and quantity:\n                1. One (1) article: 🚨 (Critical/Breaking)\n                2. One (1) article: ⚡ (Systemic/High Impact)\n                3. One (1) article: 💫 (Catalytic/Game Changer)\n                4. Four (4) articles: 📌 (Contextual/Important)\n\n                Total = 7 articles.\n            </sorting_rules_section_1>\n\n            Format:\n            [Emoji] [Strictly Translated Title in Ukrainian](URL)\n            [Facts: 2 sentences. Cause/Effect: 2 sentences. Impact: 1 sentence]\n        </section_1_executive_summary>\n\n        Header: *---- 🏛️ РЕГІОНИ ----*\n\n        <section_2_regional_categories>\n            <volume_control>\n                Target Quantity: EXACTLY 5 articles per region.\n                Logic:\n                - If >5 articles remain: Select top 5 based on priority.\n                - If 1-5 articles remain: Include ALL of them.\n                - Only use fewer than 5 if input data is exhausted.\n            </volume_control>\n\n            <emoji_rules_section_2>\n                STRICTLY use ONLY the following emojis.\n                NEGATIVE CONSTRAINT: DO NOT use 🚨, ⚡, 💫, or 📌 in this section.\n            </emoji_rules_section_2>\n\n            <sorting_rules_section_2>\n                For EACH region, you MUST sort the articles in this descending order of priority:\n                1. 🔴 (Critical) - appear first.\n                2. 🟡 (Significant) - appear second.\n                3. 🟢 (Important/Minor) - appear last.\n            </sorting_rules_section_2>\n\n            Format:\n            [Region Header]\n\n            **[Emoji] [Strictly Translated Title in Ukrainian](URL)**\n            [Sentence 1: Context/Event. Sentence 2: Details/Development. Sentence 3: Outcome/Significance.]\n        </section_2_regional_categories>\n    </output_structure_part_2_digest>\n\n    <style_and_formatting>\n        1. LANGUAGE: Ukrainian.\n        2. EMPHASIS: Use `*bold*` for strong emphasis and `_italic_` for secondary emphasis/terms.\n        3. LISTS: Use `•` for any nested lists if required.\n        4. SENTENCE LENGTH OVERRIDE (Part 2): In Executive Summary, strictly provide 5 distinct sentences per article. In Regional Categories, strictly provide 3 distinct sentences per article. Ignore default conciseness settings to ensure analytical depth.\n        5. EMOJIS: Use freely in Part 2 (Digest). PROHIBITED in Part 1 (Essay).\n    </style_and_formatting>\n\n    <output_format>\n        Telegram brief (Markdown)\n    </output_format>\n\n</instructions>\n\nOutput the full report below, starting immediately with the first header `*---- 🧠 АНАЛІТИКА ДНЯ ----*`:\n",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -560,
+        -784
+      ],
+      "id": "c26c078e-f56d-4653-a27a-2f628fc31649",
+      "name": "Articles Politics",
+      "executeOnce": true,
+      "alwaysOutputData": false,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d61578bf-0934-48c1-b1d5-a30a02459d82",
+              "leftValue": "={{ $('Process new articles').all() }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "array",
+                "operation": "lengthGt",
+                "rightType": "number"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2816,
+        -368
+      ],
+      "id": "b23b4305-36b3-445a-8182-55fda2f9fd36",
+      "name": "If new articles",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "include": "specifiedFields",
+        "fieldsToInclude": "title, link, summary",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -752,
+        -784
+      ],
+      "id": "895376af-6518-49b9-869f-0377166fb6fc",
+      "name": "Aggregate Politics Articles"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "text"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -192,
+        -784
+      ],
+      "id": "97092f5e-2633-4bb0-b4e3-e3d8b17ce373",
+      "name": "Aggregate Politics AI"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputData = $items(\"Process new articles\", 0);\n\nfunction getCurrentTimestamp() {\n  return new Date().toISOString();\n}\n\nconst processedData = inputData.map(item => {\n  const data = item.json;\n  \n  return {\n    article_url: data.link,\n    processed: true,\n    publish_date: data.isoDate || getCurrentTimestamp()\n  };\n});\n\nreturn processedData.map(item => ({ json: item }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        -512
+      ],
+      "id": "cd7fa5a7-28af-401e-858a-efff4d7aa7a0",
+      "name": "Prepare data for DB Politics",
+      "retryOnFail": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "CMfpIRqQ2jZlzTwc",
+          "mode": "list",
+          "cachedResultName": "articles",
+          "cachedResultUrl": "/projects/VRQDZNJUhzlPnRhi/datatables/CMfpIRqQ2jZlzTwc"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "processed": false
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "article_url",
+              "displayName": "article_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "fetched_at",
+              "displayName": "fetched_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "publish_date",
+              "displayName": "publish_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "processed",
+              "displayName": "processed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        -512
+      ],
+      "id": "8b16db20-0104-418a-be1e-fbfec84a9c7f",
+      "name": "DB Insert processed Politics",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "720d7288-8c7f-4d27-9740-646febb8456c",
+              "leftValue": "={{ $json.content.length }}",
+              "rightValue": 1000,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2720,
+        48
+      ],
+      "id": "b92d74ff-c044-40ac-8214-cf47a742fe21",
+      "name": "If content >1000 symbols"
+    },
+    {
+      "parameters": {
+        "operation": "rowNotExists",
+        "dataTableId": {
+          "__rl": true,
+          "value": "CMfpIRqQ2jZlzTwc",
+          "mode": "list",
+          "cachedResultName": "articles",
+          "cachedResultUrl": "/projects/VRQDZNJUhzlPnRhi/datatables/CMfpIRqQ2jZlzTwc"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "article_url",
+              "keyValue": "={{ $json.link }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        -3408,
+        -368
+      ],
+      "id": "d35cd50d-3648-4def-821c-39b0233573c3",
+      "name": "Process new articles",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "fieldsToSummarize": {
+          "values": [
+            {
+              "field": "link"
+            }
+          ]
+        },
+        "options": {
+          "outputFormat": "separateItems"
+        }
+      },
+      "type": "n8n-nodes-base.summarize",
+      "typeVersion": 1.1,
+      "position": [
+        304,
+        -16
+      ],
+      "id": "8f5c95e2-9c8a-4988-ad46-4bf1444dea73",
+      "name": "Count total articles"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1328,
+        -240
+      ],
+      "id": "f65ac020-01f0-499c-8a79-5a5ddb8052d0",
+      "name": "Aggregate statistics"
+    },
+    {
+      "parameters": {
+        "fieldsToSummarize": {
+          "values": [
+            {
+              "field": "link"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.summarize",
+      "typeVersion": 1.1,
+      "position": [
+        304,
+        -560
+      ],
+      "id": "77afbeff-24e2-483a-b488-d2f207e0afa0",
+      "name": "Count Politics"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1136,
+        -256
+      ],
+      "id": "86b7190e-0f1a-491f-8e1a-bdbab5120a3a",
+      "name": "Merge count"
+    },
+    {
+      "parameters": {
+        "keys": {
+          "key": [
+            {
+              "currentKey": "count_link",
+              "newKey": "ai_politics"
+            }
+          ]
+        },
+        "additionalOptions": {}
+      },
+      "type": "n8n-nodes-base.renameKeys",
+      "typeVersion": 1,
+      "position": [
+        464,
+        -560
+      ],
+      "id": "1e3ccd06-c3e4-4243-85a6-2b46f1e2cc3f",
+      "name": "ai_politics"
+    },
+    {
+      "parameters": {
+        "keys": {
+          "key": [
+            {
+              "currentKey": "count_link",
+              "newKey": "input_relevance"
+            }
+          ]
+        },
+        "additionalOptions": {}
+      },
+      "type": "n8n-nodes-base.renameKeys",
+      "typeVersion": 1,
+      "position": [
+        464,
+        -16
+      ],
+      "id": "1d7ab7ab-a1bd-4ab4-836e-1bae91ac6892",
+      "name": "input_relevance"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "091b69f4-6972-470d-b9e2-a2bd22ce8742",
+              "name": "contentSnippet",
+              "value": "={{ $json['content:encodedSnippet'] ?? $json.contentSnippet}}",
+              "type": "string"
+            },
+            {
+              "id": "e4a8349d-3bf4-4aa6-9442-63266e912d68",
+              "name": "content",
+              "value": "={{ $json['content:encoded'] ?? $json.content}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "include": "except",
+        "excludeFields": "content:encodedSnippet, content:encoded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -3408,
+        -160
+      ],
+      "id": "e15ff9f7-9ae3-4003-9608-bd415fe41bd2",
+      "name": "Normalize Fields"
+    },
+    {
+      "parameters": {
+        "compare": "selectedFields",
+        "fieldsToCompare": "link",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        -3024,
+        -368
+      ],
+      "id": "3031bb55-1656-4337-bbe4-4ab8c25365d6",
+      "name": "Remove Duplicates",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7817c403-47a6-4d5e-9517-bb5f8d1220e1",
+              "leftValue": "={{ $json.link }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -3216,
+        -368
+      ],
+      "id": "d260075b-a85c-4095-8092-dda6e03c6759",
+      "name": "If link exists"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "aa94e63f-91bd-491e-9fd0-0e1ac61c43e6",
+              "leftValue": "={{ $json.contentSnippet }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -3216,
+        -160
+      ],
+      "id": "d9a352c1-231a-44fd-8d82-ce8b3ab96499",
+      "name": "If contentSnippet exists"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "CHX9Cp09E53psuPW",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/CHX9Cp09E53psuPW",
+          "cachedResultName": "Send statistics (sub workflow)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "model_names": "={{ [\"gemini-2.5-flash-lite\", \"gemini-2.5-flash-lite Politics\", \"gemini-3-pro Politics Analytics\", \"gemini-3-pro Articles Politics\", \"gemini-2.5-flash-lite Tech\", \"gemini-3-flash Articles Tech\"] }}",
+            "excecution_id": "={{ $execution.id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "excecution_id",
+              "displayName": "excecution_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "model_names",
+              "displayName": "model_names",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "array"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1984,
+        -336
+      ],
+      "id": "5fc320ec-7d35-4f50-bfea-0f880fddb76d",
+      "name": "Send statistics",
+      "executeOnce": true
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1776,
+        -336
+      ],
+      "id": "58db5b3b-d0ff-4622-8e88-6fa961b8b69d",
+      "name": "Merge statistics"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "60fa32d8-00d8-4a80-bdc3-e50cbe1a4145",
+              "name": "content",
+              "value": "={{ $json.content }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1792,
+        -848
+      ],
+      "id": "a7ea5946-bb5a-4f76-b7c5-4e4bcf2e139e",
+      "name": "Content Politics"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "60fa32d8-00d8-4a80-bdc3-e50cbe1a4145",
+              "name": "content",
+              "value": "={{ $json.content }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1792,
+        -224
+      ],
+      "id": "f82f75dc-5b47-4514-8b9a-d845e91f56e3",
+      "name": "Content Tech"
+    },
+    {
+      "parameters": {
+        "chunkSize": 100000,
+        "chunkOverlap": 2000,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainSummarization",
+      "typeVersion": 2.1,
+      "position": [
+        -1616,
+        -224
+      ],
+      "id": "0ae35486-80ca-4b60-b5f9-bf9be8d47696",
+      "name": "Summarization Tech",
+      "executeOnce": false,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "alwaysOutputData": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {
+          "safetySettings": {
+            "values": [
+              {
+                "category": "HARM_CATEGORY_HARASSMENT",
+                "threshold": "BLOCK_NONE"
+              },
+              {
+                "category": "HARM_CATEGORY_HATE_SPEECH",
+                "threshold": "BLOCK_NONE"
+              },
+              {
+                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                "threshold": "BLOCK_NONE"
+              },
+              {
+                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                "threshold": "BLOCK_NONE"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1552,
+        -112
+      ],
+      "id": "568553f7-403a-4f17-87c9-681db028ebe5",
+      "name": "gemini-2.5-flash-lite Tech",
+      "notesInFlow": false,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "f3TWMi3ZyBlDbDmK",
+          "name": "Google Gemini(PaLM) Api account template"
+        }
+      },
+      "notes": "400 articles ~ $0.1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1152,
+        -224
+      ],
+      "id": "4d93ac5a-e6e2-43fd-bcac-62521ee0914b",
+      "name": "Merge Tech",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c23c0df7-4ba1-45c7-a1bc-e3ff7d8ac67d",
+              "name": "creator",
+              "value": "={{ $json.creator }}",
+              "type": "string"
+            },
+            {
+              "id": "4c591bd0-8d6e-4fcd-b28d-4255b382917f",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "e01682e8-45a0-4891-9f0e-e6a90c7aa088",
+              "name": "link",
+              "value": "={{ $json.link }}",
+              "type": "string"
+            },
+            {
+              "id": "acb15d54-27c6-4182-8eba-2025dc9e717c",
+              "name": "pubDate",
+              "value": "={{ $json.pubDate }}",
+              "type": "string"
+            },
+            {
+              "id": "b9d7eae7-b6bb-4418-92d6-a4a12645223b",
+              "name": "dc:creator",
+              "value": "={{ $json['dc:creator'] }}",
+              "type": "string"
+            },
+            {
+              "id": "83fbea1a-63f3-40ea-9bcd-d62b2886a7fa",
+              "name": "content",
+              "value": "={{ $json.content }}",
+              "type": "string"
+            },
+            {
+              "id": "7ddaa8b2-5543-4987-a8a5-c8e63fe431ee",
+              "name": "contentSnippet",
+              "value": "={{ $json.contentSnippet }}",
+              "type": "string"
+            },
+            {
+              "id": "dcf29ebe-5aea-46db-9650-28220f07f5f2",
+              "name": "guid",
+              "value": "={{ $json.guid }}",
+              "type": "string"
+            },
+            {
+              "id": "87125e4d-1c3c-46f2-b849-b474d9b29106",
+              "name": "categories",
+              "value": "={{ $json.categories }}",
+              "type": "string"
+            },
+            {
+              "id": "7e149139-71b8-4510-8895-8ffe70cd3f6b",
+              "name": "isoDate",
+              "value": "={{ $json.isoDate }}",
+              "type": "string"
+            },
+            {
+              "id": "14031ef7-3a6a-4ce5-b772-d1898203af08",
+              "name": "summary",
+              "value": "={{ $json.output.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "dotNotation": false
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -960,
+        -224
+      ],
+      "id": "50eb7e63-b4ba-4e65-8f4e-df4ce667135d",
+      "name": "Set Fields Tech"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "include": "specifiedFields",
+        "fieldsToInclude": "title, link, summary",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -752,
+        -224
+      ],
+      "id": "f536d0f8-bd6c-49f7-bfeb-7e147635bc18",
+      "name": "Aggregate Tech Articles"
+    },
+    {
+      "parameters": {
+        "jsCode": "function splitMessage(text, limit = 4000) {\n  const parts = [];\n  while (text.length > limit) {\n    let splitPos = text.lastIndexOf('\\n', limit);\n    if (splitPos === -1 || splitPos < 100) {\n      splitPos = limit;\n    }\n    parts.push(text.slice(0, splitPos));\n    text = text.slice(splitPos);\n  }\n  if (text) {\n    parts.push(text);\n  }\n  return parts;\n}\n\nconst textArray = $json[\"text\"];\n\nif (!Array.isArray(textArray)) {\n  throw new Error(\"The input data must contain an array 'text'\");\n}\n\nconst today = new Date();\nconst formattedDate = today.toLocaleDateString('ru-RU', { \n  day: 'numeric', \n  month: 'long', \n  year: 'numeric' \n}).replace(/\\//g, '.');\nconst header = `📊 *News digest for ${formattedDate}*\\n\\n`;\n\nconst fullMessage = textArray.join('\\n\\n');\n\nconst messageWithHeader = header + fullMessage;\n\nconst chunks = splitMessage(messageWithHeader, 4096);\n\nreturn chunks.map((chunk, index) => ({ \n  json: { \n    text: chunk,\n    part: index + 1,\n    total_parts: chunks.length\n  } \n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        -224
+      ],
+      "id": "09108efa-f95c-4989-b186-4c1630c40d6e",
+      "name": "Split message Tech",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        192,
+        -224
+      ],
+      "id": "48a17382-865a-4bc8-8a8e-9afe3bc44f48",
+      "name": "Telegram Tech",
+      "webhookId": "4ee9d79b-ad2f-4dc8-ba4e-3f003518f91c",
+      "executeOnce": false,
+      "notesInFlow": false,
+      "retryOnFail": false,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "telegramApi": {
+          "id": "38giC5s85GNwUMTu",
+          "name": "Telegram account template"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldsToSummarize": {
+          "values": [
+            {
+              "field": "link"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.summarize",
+      "typeVersion": 1.1,
+      "position": [
+        304,
+        -416
+      ],
+      "id": "91300fd1-4a2f-4aac-9123-6c7b25bbbe8b",
+      "name": "Count Tech"
+    },
+    {
+      "parameters": {
+        "keys": {
+          "key": [
+            {
+              "currentKey": "count_link",
+              "newKey": "ai_tech"
+            }
+          ]
+        },
+        "additionalOptions": {}
+      },
+      "type": "n8n-nodes-base.renameKeys",
+      "typeVersion": 1,
+      "position": [
+        464,
+        -416
+      ],
+      "id": "4bce8ef0-bb7b-4945-bbd7-e078dee9b81e",
+      "name": "ai_tech"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1040,
+        -512
+      ],
+      "id": "ab2404f2-a5ee-4d9a-b400-791b3fafb368",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=<input_data>\n    {{ $json.data.toJsonString() }}\n</input_data>\n\n<instructions>\n    <role>\n        Experienced analyst with 15 years of experience in modern technologies, science, and AI, and an editor\n    </role>\n\n    <task>\n        Analyze the provided <input_data> and generate a structured intelligence digest for Telegram in Ukrainian.\n    </task>\n\n    <title_translation_protocol>\n        <prime_directive>\n            Translate article titles with EXTREME SEMANTIC FIDELITY. Do not editorialize, exaggerate, or change the subject-object relationship.\n        </prime_directive>\n        <strict_rules>\n            1. NO INTERPRETATION: Translate exactly what the title says, not what the article implies.\n            2. PRESERVE RELATIONSHIPS: If a title says \"X included in Y's files\", do NOT translate as \"X meets Y\".\n            3. NO CLICKBAIT: Maintain a neutral, journalistic tone even if the original is sensational.\n        </strict_rules>\n        <few_shot_examples>\n            Original: \"Apple halts development of own Wi-Fi chips to focus on 3nm transition\"\n            BAD TRANSLATION: \"Apple більше не підтримуватиме Wi-Fi в нових пристроях\" (Hallucination: catastrophic inference).\n            CORRECT TRANSLATION: \"Apple призупиняє розробку власних Wi-Fi чіпів заради переходу на 3-нм техпроцес\" (Accurate: accurate context of business decision).\n\n            Original: \"Nvidia aims to begin H200 chip shipments to China by mid-February, sources say\"\n            BAD TRANSLATION: \"Nvidia підтвердила початок продажів H200 в Китаї в лютому\" (Hallucination: turns \"aims/sources say\" into official confirmation).\n            CORRECT TRANSLATION: \"Nvidia планує розпочати поставки ШІ-чіпів H200 до Китаю до лютого, повідомляють джерела\" (Accurate: preserves uncertainty attribution).\n        </few_shot_examples>\n    </title_translation_protocol>\n\n    <negative_constraints>\n        1. NO META-TALK: Do not write \"Here is the summary\", \"Based on the data\", or any analysis before the header.\n        2. NO CONCLUDING TEXT: Do not write any \"Conclusion\", \"Outlook\", or \"Short-term forecast\" paragraphs after the last region.\n        3. NO MARKDOWN ARTIFACTS: Do not use `***` or `---` separators unless explicitly requested. Do not use code blocks (```)\n        4. NO PLACEHOLDERS: Never use brackets like [Insert text here].\n        5. NO COPYING: Do not output the prompt instructions.\n        6. NO TITLES IN ENGLISH: Do not create [Title in English].\n        7. NO TITLE DISTORTION: Never alter the factual meaning of a headline to make it more dramatic in Ukrainian.\n    </negative_constraints>\n\n    <critical_url_hygiene>\n        1. PROTOCOL CHECK: Ensure URLs have exactly ONE protocol.\n           - Bad: `https://http://site.com` or `http://https://site.com`\n           - Good: `https://site.com`\n        2. NO SPACES: URLs must NOT contain spaces.\n           - Bad: `al jazeera.com/news`\n           - Good: `aljazeera.com/news`\n        3. FORMAT: All links must be strictly Markdown: `[Strictly Translated Title in Ukrainian](URL)`.\n    </critical_url_hygiene>\n\n    <output_structure>\n        <volume_control>\n            Target Quantity: EXACTLY 5 articles per category.\n            Logic:\n            - If >5 articles remain: Select top 5.\n            - If 1-5 articles remain: Include ALL of them.\n            - Only use fewer than 5 if input data is exhausted.\n        </volume_control>\n\n        <emoji_rules_output_structure>\n            STRICTLY use ONLY the following emojis in descending order of priority:\n            1. 🔴 (Critical)\n            2. 🟡 (Significant)\n            3. 🟢 (Important)\n        </emoji_rules_output_structure>\n\n        Categories: 🤖 AI, 💻 TECH, 🔬 SCIENCE.\n        Format:\n        *---- 🤖 AI ----*\n\n        **🔴 [Strictly Translated Title in Ukrainian](URL)**\n        [Sentence 1: Context/Event. Sentence 2: Details/Development. Sentence 3: Outcome/Significance.]\n\n        **🟡 [Strictly Translated Title in Ukrainian](URL)**\n        [Sentence 1: Context/Event. Sentence 2: Details/Development. Sentence 3: Outcome/Significance.]\n\n        (Use emojis based on priority: 🔴 Critical, 🟡 Significant, 🟢 Important)\n    </output_structure>\n\n<style_and_formatting>\n        1. LANGUAGE: Ukrainian.\n        2. EMPHASIS: Use `*bold*` for strong emphasis and `_italic_` for secondary emphasis/terms.\n        3. LISTS: Use `•` for any nested lists if required.\n        4. SENTENCE LENGTH OVERRIDE: Strictly provide 3 distinct sentences per article. Ignore default conciseness settings to ensure analytical depth.\n        5. EMOJIS: Use freely for better visual perception as indicated in templates.\n    </style_and_formatting>\n\n    <output_format>\n        Telegram brief (Markdown)\n    </output_format>\n</instructions>\n\nOutput the digest below, starting immediately with the header `*---- 🤖 AI ----*`:\n",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -560,
+        -224
+      ],
+      "id": "9c93322d-7e06-4995-9f12-8458fe7e711b",
+      "name": "Articles Tech",
+      "executeOnce": true,
+      "alwaysOutputData": false,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "text"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        -224
+      ],
+      "id": "04353c80-96ee-404e-8140-086711522d32",
+      "name": "Aggregate Tech AI"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://article-classifier:8020/classify",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "articles",
+              "value": "={{ $json.articles }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 100000000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2304,
+        -1056
+      ],
+      "id": "563709e5-cbfd-4213-8ded-8c4e6e285021",
+      "name": "Articles Relevance Local"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "articles",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -2464,
+        -1056
+      ],
+      "id": "89f3f66e-4921-4209-8e76-c419c44fd1b3",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "articles",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -2144,
+        -1056
+      ],
+      "id": "6466c680-4e31-4f4c-9263-f3d92f080eda",
+      "name": "Split Out1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "59069b69-42c7-4e3c-a370-fe3574f30857",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "=relevant_politics",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "relevant_politics"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "=relevant_tech",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "136c0e78-e284-4c1d-aabb-e71aabad83e1"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "relevant_tech"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "ab7e0d16-81fe-4419-b833-ab0fb3bc2896",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "not_relevant",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "not_relevant"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -1984,
+        -1072
+      ],
+      "id": "86b59ec2-f64f-491f-9157-06c9c5e7c66a",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3-flash-preview",
+        "options": {
+          "temperature": 1,
+          "safetySettings": {
+            "values": [
+              {
+                "category": "HARM_CATEGORY_HARASSMENT",
+                "threshold": "BLOCK_NONE"
+              },
+              {
+                "category": "HARM_CATEGORY_HATE_SPEECH",
+                "threshold": "BLOCK_NONE"
+              },
+              {
+                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                "threshold": "BLOCK_NONE"
+              },
+              {
+                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                "threshold": "BLOCK_NONE"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -496,
+        -96
+      ],
+      "id": "c70d55a6-9857-4343-b8cf-2acd9d1d591a",
+      "name": "gemini-3-flash Articles Tech",
+      "notesInFlow": false,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "f3TWMi3ZyBlDbDmK",
+          "name": "Google Gemini(PaLM) Api account template"
+        }
+      },
+      "notes": "400 articles ~ $0.2"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3-pro-preview",
+        "options": {
+          "temperature": 1,
+          "safetySettings": {
+            "values": [
+              {
+                "category": "HARM_CATEGORY_HARASSMENT",
+                "threshold": "BLOCK_NONE"
+              },
+              {
+                "category": "HARM_CATEGORY_HATE_SPEECH",
+                "threshold": "BLOCK_NONE"
+              },
+              {
+                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                "threshold": "BLOCK_NONE"
+              },
+              {
+                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                "threshold": "BLOCK_NONE"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -496,
+        -672
+      ],
+      "id": "74e73991-606c-49b4-b471-8ed1c79b69ac",
+      "name": "gemini-3-pro Articles Politics",
+      "notesInFlow": false,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "f3TWMi3ZyBlDbDmK",
+          "name": "Google Gemini(PaLM) Api account template"
+        }
+      },
+      "notes": "400 articles ~ $0.2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get RSS Feed URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get RSS Feed URLs": {
+      "main": [
+        [
+          {
+            "node": "RSS Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read URL": {
+      "main": [
+        [
+          {
+            "node": "Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplicate articles": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read": {
+      "main": [
+        [
+          {
+            "node": "Set article_life_time",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Summarization Politics": {
+      "main": [
+        [
+          {
+            "node": "Merge Politics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Politics": {
+      "main": [
+        [
+          {
+            "node": "Set Fields Politics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Fields Politics": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Politics Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split message Politics": {
+      "main": [
+        [
+          {
+            "node": "Telegram Politics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data to list": {
+      "main": [
+        [
+          {
+            "node": "Deduplicate articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "JSON preparing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JSON preparing": {
+      "main": [
+        [
+          {
+            "node": "Read URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parser": {
+      "main": [
+        [
+          {
+            "node": "If content >1000 symbols",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Articles Relevance": {
+      "main": [
+        [
+          {
+            "node": "Merge Politics",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Count Politics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Content Politics",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Content Tech",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Count Tech",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge Tech",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set article_life_time": {
+      "main": [
+        [
+          {
+            "node": "Proceed with article_life_time < 25h",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "gemini-2.5-flash-lite": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Articles Relevance",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "gemini-2.5-flash-lite Politics": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summarization Politics",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Proceed with article_life_time < 25h": {
+      "main": [
+        [
+          {
+            "node": "Process new articles",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Telegram Politics": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set fields - new_articles": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Articles Politics": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Politics AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If new articles": {
+      "main": [
+        [
+          {
+            "node": "Normalize Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Politics Articles": {
+      "main": [
+        [
+          {
+            "node": "Articles Politics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Politics AI": {
+      "main": [
+        [
+          {
+            "node": "Split message Politics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare data for DB Politics": {
+      "main": [
+        [
+          {
+            "node": "DB Insert processed Politics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB Insert processed Politics": {
+      "main": [
+        [
+          {
+            "node": "Merge statistics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If content >1000 symbols": {
+      "main": [
+        [
+          {
+            "node": "Count total articles",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Articles Relevance",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Process new articles": {
+      "main": [
+        [
+          {
+            "node": "If link exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count total articles": {
+      "main": [
+        [
+          {
+            "node": "input_relevance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate statistics": {
+      "main": [
+        [
+          {
+            "node": "Merge statistics",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Count Politics": {
+      "main": [
+        [
+          {
+            "node": "ai_politics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge count": {
+      "main": [
+        [
+          {
+            "node": "Aggregate statistics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ai_politics": {
+      "main": [
+        [
+          {
+            "node": "Merge count",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "input_relevance": {
+      "main": [
+        [
+          {
+            "node": "Merge count",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Normalize Fields": {
+      "main": [
+        [
+          {
+            "node": "If contentSnippet exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates": {
+      "main": [
+        [
+          {
+            "node": "If new articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If link exists": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If contentSnippet exists": {
+      "main": [
+        [
+          {
+            "node": "Data to list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge statistics": {
+      "main": [
+        [
+          {
+            "node": "Send statistics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Content Politics": {
+      "main": [
+        [
+          {
+            "node": "Summarization Politics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Content Tech": {
+      "main": [
+        [
+          {
+            "node": "Summarization Tech",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarization Tech": {
+      "main": [
+        [
+          {
+            "node": "Merge Tech",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "gemini-2.5-flash-lite Tech": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summarization Tech",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Tech": {
+      "main": [
+        [
+          {
+            "node": "Set Fields Tech",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Fields Tech": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Tech Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Tech Articles": {
+      "main": [
+        [
+          {
+            "node": "Articles Tech",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split message Tech": {
+      "main": [
+        [
+          {
+            "node": "Telegram Tech",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count Tech": {
+      "main": [
+        [
+          {
+            "node": "ai_tech",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ai_tech": {
+      "main": [
+        [
+          {
+            "node": "Merge count",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Telegram Tech": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Prepare data for DB Politics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Articles Tech": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Tech AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Tech AI": {
+      "main": [
+        [
+          {
+            "node": "Split message Tech",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Articles Relevance Local",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Articles Relevance Local": {
+      "main": [
+        [
+          {
+            "node": "Split Out1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out1": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "gemini-3-flash Articles Tech": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Articles Tech",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "gemini-3-pro Articles Politics": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Articles Politics",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "821IvOd71N0nzKr5"
+  },
+  "versionId": "261b3e7c-030a-47e0-9093-8b22e0ccdbc7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "558d88703fb65b2d0e44613bc35916258b0f0bf983c5d4730c00c424b77ca36a"
+  },
+  "id": "bT93OGEeAIpMJ35N",
+  "tags": []
+}
