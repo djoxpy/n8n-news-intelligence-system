@@ -1,0 +1,249 @@
+{
+  "name": "Send statistics (sub workflow) template",
+  "nodes": [
+    {
+      "parameters": {
+        "resource": "execution",
+        "operation": "get",
+        "executionId": "={{ $('Start').item.json.excecution_id }}",
+        "options": {
+          "activeWorkflows": true
+        },
+        "requestOptions": {}
+      },
+      "id": "3dcd798e-9702-4b5a-b347-1cd7bdde44f7",
+      "name": "Get an execution",
+      "type": "n8n-nodes-base.n8n",
+      "position": [
+        336,
+        -32
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "n8nApi": {
+          "id": "TXO8GaAJpmgkH8oN",
+          "name": "n8n account template"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.all();\nconst data = input[0].json;\nconst keysToSearch = $('Start').item.json.model_names;\nconst nodes = data.workflowData?.nodes ?? [];\nconst totals = {\n\tcompletionTokens: 0,\n\tpromptTokens: 0,\n\ttotalTokens: 0,\n};\nconst models = new Set();\nconst detailedUsages = [];\n\nlet aiPolitics = 0;\nlet aiTech = 0;\nlet inputRelevance = 0;\n\nfunction accumulate(usage, model) {\n\tif (\n\t\ttypeof usage.completionTokens === 'number' &&\n\t\ttypeof usage.promptTokens === 'number' &&\n\t\ttypeof usage.totalTokens === 'number'\n\t) {\n\t\ttotals.completionTokens += usage.completionTokens;\n\t\ttotals.promptTokens += usage.promptTokens;\n\t\ttotals.totalTokens += usage.totalTokens;\n\t\tif (model) models.add(model);\n\t\tdetailedUsages.push({\n\t\t\tmodel,\n\t\t\tusage: { ...usage },\n\t\t});\n\t}\n}\n\nfunction findTokenUsageRecursively(obj, model) {\n\tif (typeof obj !== 'object' || obj === null) return;\n\tif (\n\t\ttypeof obj.completionTokens === 'number' &&\n\t\ttypeof obj.promptTokens === 'number' &&\n\t\ttypeof obj.totalTokens === 'number'\n\t) {\n\t\taccumulate(obj, model);\n\t\treturn;\n\t}\n\tif (Array.isArray(obj)) {\n\t\tobj.forEach((item) => findTokenUsageRecursively(item, model));\n\t} else {\n\t\tconst detectedModel = obj.model || model;\n\t\tfor (const key in obj) {\n\t\t\tif (Object.prototype.hasOwnProperty.call(obj, key)) {\n\t\t\t\tfindTokenUsageRecursively(obj[key], detectedModel);\n\t\t\t}\n\t\t}\n\t}\n}\n\nfunction processExecution(exec, nodeName) {\n\tconst node = nodes.find((n) => n.name === nodeName);\n\tconst model = node?.parameters?.modelName || node?.parameters?.model || node?.parameters?.name;\n\tfindTokenUsageRecursively(exec, model);\n}\n\nfunction extractStatistics() {\n\tconst aggregateStats = data.data?.resultData?.runData?.['Aggregate statistics'];\n\t\n\tif (!aggregateStats || !Array.isArray(aggregateStats)) return;\n\t\n\taggregateStats.forEach(execution => {\n\t\tconst mainData = execution?.data?.main?.[0]?.[0]?.json?.data;\n\t\t\n\t\tif (!Array.isArray(mainData)) return;\n\t\t\n\t\tmainData.forEach(item => {\n\t\t\tif (typeof item.ai_politics === 'number') {\n\t\t\t\taiPolitics = item.ai_politics;\n\t\t\t}\n\t\t\tif (typeof item.ai_tech === 'number') {\n\t\t\t\taiTech = item.ai_tech;\n\t\t\t}\n\t\t\tif (typeof item.input_relevance === 'number') {\n\t\t\t\tinputRelevance = item.input_relevance;\n\t\t\t}\n\t\t});\n\t});\n}\n\nfor (const key of keysToSearch) {\n\tconst executions = data.data?.resultData?.runData?.[key];\n\tif (!executions) continue;\n\tif (Array.isArray(executions)) {\n\t\texecutions.forEach((exec) => processExecution(exec, key));\n\t} else if (typeof executions === 'object') {\n\t\tprocessExecution(executions, key);\n\t}\n}\n\nextractStatistics();\n\nreturn [\n\t{\n\t\tjson: {\n\t\t\ttotals,\n\t\t\tmodels: Array.from(models),\n\t\t\tdetailedUsages,\n\t\t\tstatistics: {\n\t\t\t\tai_politics: aiPolitics,\n\t\t\t\tai_tech: aiTech,\n\t\t\t\tinput_relevance: inputRelevance\n\t\t\t}\n\t\t},\n\t\tpairedItem: [{ item: 0 }] \n\t},\n];"
+      },
+      "id": "a2529774-fb15-43d1-b7b2-e1b2b4890305",
+      "name": "map json",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        576,
+        -32
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "chatId": "165351392",
+        "text": "=ℹ️ {{ $now.format('dd-MM-yyyy | HH:mm') }}\nTotal AI:     *{{ $('Set statistics').item.json.statistics.input_relevance }}*\nPolitics AI: *{{ $('Set statistics').item.json.statistics.ai_politics }}*\nTech AI:     *{{ $('Set statistics').item.json.statistics.ai_tech }}*\nCost:      *{{ $json.summary.totalCost }} USD*\n",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_notification": true
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1520,
+        -32
+      ],
+      "id": "a9d027d4-355d-49a8-91b1-2fa53d629906",
+      "name": "Send Statistics",
+      "webhookId": "bf22ff35-36b0-4d5c-8430-a3d0793006bb",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "telegramApi": {
+          "id": "38giC5s85GNwUMTu",
+          "name": "Telegram account template"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "931f1860-2811-4e64-bd11-f6979e821613",
+              "name": "statistics",
+              "value": "={{ $json.statistics }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        816,
+        -32
+      ],
+      "id": "9c37a352-4146-4b17-af28-053346496595",
+      "name": "Set statistics"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $items(\"map json\", 0);;\nconst data = input[0].json;\n\nfunction calculateTokensByModel(data) {\n  const result = {};\n  \n  if (!data.detailedUsages || !Array.isArray(data.detailedUsages)) {\n    return result;\n  }\n  \n  data.detailedUsages.forEach(usage => {\n    const model = usage.model;\n    \n    if (!model || !usage.usage) {\n      return;\n    }\n    \n    if (!result[model]) {\n      result[model] = {\n        completionTokens: 0,\n        promptTokens: 0,\n        totalTokens: 0\n      };\n    }\n    \n    result[model].completionTokens += usage.usage.completionTokens || 0;\n    result[model].promptTokens += usage.usage.promptTokens || 0;\n    result[model].totalTokens += usage.usage.totalTokens || 0;\n  });\n  \n  return result;\n}\n\nconst tokensByModel = calculateTokensByModel(data);\n\nreturn [\n  {\n    json: {\n      tokensByModel,\n      summary: {\n        totalModels: Object.keys(tokensByModel).length,\n        models: Object.keys(tokensByModel)\n      }\n    },\n    pairedItem: [{ item: 0 }]\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        -32
+      ],
+      "id": "4ac4dff6-12e1-42c0-b929-6074554a399f",
+      "name": "Sum tokens"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.all();\nconst data = input[0].json.tokensByModel;\n\nconst PRICING = {\n  'models/gemini-2.5-flash-lite': {\n    input: 0.10,\n    output: 0.40\n  },\n  'models/gemini-3-flash-preview': {\n    input: 0.5,\n    output: 3.00\n  },\n  'models/gemini-3-pro-preview': {\n    input: 2.00,\n    output: 12.00\n  }\n};\n\nfunction calculateCosts(tokensByModel) {\n  const results = [];\n  let totalCost = 0;\n  \n  for (const model in tokensByModel) {\n    const tokens = tokensByModel[model];\n    const pricing = PRICING[model];\n    \n    const inputCost = (tokens.promptTokens / 1000000) * pricing.input;\n    const outputCost = (tokens.completionTokens / 1000000) * pricing.output;\n    const modelTotalCost = inputCost + outputCost;\n    \n    totalCost += modelTotalCost;\n    \n    results.push({\n      model,\n      tokens: {\n        promptTokens: tokens.promptTokens,\n        completionTokens: tokens.completionTokens,\n        totalTokens: tokens.totalTokens\n      },\n      costs: {\n        inputCost: Number(inputCost.toFixed(6)),\n        outputCost: Number(outputCost.toFixed(6)),\n        totalCost: Number(modelTotalCost.toFixed(6))\n      },\n      pricing: {\n        inputPricePerMillion: pricing.input,\n        outputPricePerMillion: pricing.output\n      }\n    });\n  }\n  \n  return {\n    details: results,\n    summary: {\n      totalCost: Number(totalCost.toFixed(2)),\n      currency: 'USD'\n    }\n  };\n}\n\nconst costAnalysis = calculateCosts(data);\n\nreturn [\n  {\n    json: costAnalysis,\n    pairedItem: [{ item: 0 }]\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1296,
+        -32
+      ],
+      "id": "e92f50ad-af79-4351-969e-0444a725b645",
+      "name": "Price"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "excecution_id"
+            },
+            {
+              "name": "model_names",
+              "type": "array"
+            }
+          ]
+        }
+      },
+      "id": "b5cfcf91-2ae8-438b-ac54-5cf913235b97",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        -176,
+        -32
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        96,
+        -32
+      ],
+      "id": "cc6b5749-405b-4ce4-bfe7-adba83969df0",
+      "name": "Wait",
+      "webhookId": "575750ed-6837-4608-9242-78f38f8d18b5"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get an execution": {
+      "main": [
+        [
+          {
+            "node": "map json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "map json": {
+      "main": [
+        [
+          {
+            "node": "Set statistics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set statistics": {
+      "main": [
+        [
+          {
+            "node": "Sum tokens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sum tokens": {
+      "main": [
+        [
+          {
+            "node": "Price",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Price": {
+      "main": [
+        [
+          {
+            "node": "Send Statistics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Get an execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "821IvOd71N0nzKr5"
+  },
+  "versionId": "4989311d-82ac-448e-baf5-c685924b315c",
+  "meta": {
+    "instanceId": "558d88703fb65b2d0e44613bc35916258b0f0bf983c5d4730c00c424b77ca36a"
+  },
+  "id": "CPFOlXjKcvDThfvl",
+  "tags": []
+}

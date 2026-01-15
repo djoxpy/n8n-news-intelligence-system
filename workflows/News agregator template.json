@@ -72,7 +72,7 @@
     {
       "parameters": {
         "executeOnce": false,
-        "command": "=python3 /home/node/.n8n/read_url_markdown/read_url_cleanup.py {{ JSON.stringify($json.escapedData) }} --print-json"
+        "command": "=python3 /home/node/.n8n/read_url/read_url_cleanup.py {{ JSON.stringify($json.escapedData) }} --print-json"
       },
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
@@ -2423,7 +2423,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "errorWorkflow": "821IvOd71N0nzKr5"
   },
-  "versionId": "261b3e7c-030a-47e0-9093-8b22e0ccdbc7",
+  "versionId": "9effcbcb-29c5-42b9-816b-4b615c7ed395",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "558d88703fb65b2d0e44613bc35916258b0f0bf983c5d4730c00c424b77ca36a"
