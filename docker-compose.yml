@@ -26,6 +26,9 @@ services:
     restart: unless-stopped
     volumes:
       - n8n_storage:/home/node/.n8n
+      - ./read_url/read_url_cleanup.py:/home/node/.n8n/read_url/read_url_cleanup.py:ro
+      - ./read_url/read_url.py:/home/node/.n8n/read_url/read_url.py:ro
+
     depends_on:
       postgres:
         condition: service_healthy
